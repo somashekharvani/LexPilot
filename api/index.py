@@ -17,3 +17,9 @@ if str(backend_dir) not in sys.path:
 
 # Import the FastAPI application instance
 from backend.app.main import app
+
+try:
+    from mangum import Mangum
+    handler = Mangum(app, lifespan="off")
+except ImportError:
+    handler = app
