@@ -218,6 +218,8 @@ def process_document_pipeline(file_bytes: bytes, filename: str, doc_type_hint: s
 
     return response
 
+@app.get("/api")
+@app.get("/api/")
 @app.get("/api/health")
 @app.get("/health")
 def health_check():
@@ -379,17 +381,22 @@ def update_api_key(api_key: str = Body(..., embed=True)):
         "gemini_connected": gemini_client.is_available()
     }
 
-# Serve built React frontend if dist directory exists and not on Vercel
+# Serve built React frontend if dist directory exists
 frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
-if os.path.exists(frontend_dist) and not os.getenv("VERCEL"):
+if os.path.exists(frontend_dist):
     from fastapi.staticfiles import StaticFiles
     from fastapi.responses import FileResponse
 
-    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
+    if os.path.exists(os.path.join(frontend_dist, "assets")):
+        app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
+
+    @app.get("/")
+    def serve_root():
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
 
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
-        if full_path.startswith("api/"):
+        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi"):
             raise HTTPException(status_code=404, detail="API endpoint not found")
         file_path = os.path.join(frontend_dist, full_path)
         if os.path.exists(file_path) and os.path.isfile(file_path):

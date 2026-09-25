@@ -4,13 +4,17 @@
   "outputDirectory": "frontend/dist",
   "functions": {
     "api/index.py": {
-      "includeFiles": "backend/**"
+      "includeFiles": "{backend/**,frontend/dist/**}"
     }
   },
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": "/api/index.py?__path=$1"
+    },
+    {
+      "source": "/api",
+      "destination": "/api/index.py?__path=health"
     },
     {
       "source": "/docs",
