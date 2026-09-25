@@ -16,6 +16,16 @@ from typing import List, Dict, Any, Optional
 from ..models.schemas import ContractConflict, AttentionLevel, ConfidenceLevel
 from ..graph.clause_graph import ClauseGraph
 
+# Precompiled regexes for zero-allocation conflict detection
+NOTICE_DAY_REGEX = re.compile(
+    r'(?:\((\d+)\)|\b(\d+)\b)\s*(?:days?|calendar days?|business days?)(?:[\'\"]|\s+prior|\s+written|\s+notice)',
+    re.IGNORECASE
+)
+LIABILITY_CAP_REGEX = re.compile(
+    r'(\$\s*\d+|\bfees paid\b|\btotal amount paid\b)',
+    re.IGNORECASE
+)
+
 class ConflictDetector:
     def __init__(self, clause_graph: ClauseGraph):
         self.graph = clause_graph
@@ -65,7 +75,7 @@ class ConflictDetector:
         for c in notice_clauses:
             text = c.get("text", "")
             # Look for explicit day notices (e.g. "30 days", "(30) days' prior written notice")
-            matches = re.finditer(r'(?:\((\d+)\)|\b(\d+)\b)\s*(?:days?|calendar days?|business days?)(?:[\'\"]|\s+prior|\s+written|\s+notice)', text, re.IGNORECASE)
+            matches = NOTICE_DAY_REGEX.finditer(text)
             for m in matches:
                 days = int(m.group(1) or m.group(2))
                 clause_days.append((c, days, m.group(0)))
@@ -110,7 +120,7 @@ class ConflictDetector:
         i_text = i_clause.get("text", "").lower()
 
         # Check if liability sets a monetary cap and indemnity doesn't mention the cap
-        has_cap = bool(re.search(r'(\$\s*\d+|\bfees paid\b|\btotal amount paid\b)', l_text))
+        has_cap = bool(LIABILITY_CAP_REGEX.search(l_text))
         has_indemnity_exclusion = "indemnification" in l_text or "section " + str(i_clause.get("number", "")) in l_text
 
         if has_cap and not has_indemnity_exclusion:

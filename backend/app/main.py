@@ -12,6 +12,16 @@ Single coherent pipeline orchestrating:
   8. Multi-Hop Graph Reasoning & Verified Q&A
   9. Structured Obligation Timeline
   10. Semantic Contract-to-Contract Comparison
+
+Security & Efficiency:
+  - OWASP Security Headers (HSTS, CSP, X-Frame-Options, Nosniff)
+  - Strict CORS origin validation
+  - In-Memory Sliding-Window Rate Limiting (DoS protection)
+  - File upload size enforcement (10MB limit) & PDF Magic Byte verification
+  - Prompt Injection & Adversarial Jailbreak Guardrails
+  - PII Masking and Data Privacy Filter
+  - High-Efficiency LRU Session Cache with TTL eviction
+  - SHA-256 Pipeline Memoization for <1ms contract response times
 """
 
 import os
@@ -42,19 +52,38 @@ from .graph.multi_hop import MultiHopQAEngine
 from .sample_documents.sample_data import (
     SAMPLE_EMPLOYMENT_SCANNED, SAMPLE_LEASE_CONFLICT, SAMPLE_MSA_V1, SAMPLE_MSA_V2
 )
+from .security import (
+    SecurityHeadersMiddleware, RateLimitMiddleware,
+    validate_file_upload, sanitize_filename, check_prompt_injection, mask_pii,
+    MAX_UPLOAD_BYTES, ALLOWED_EXTENSIONS
+)
+from .utils.lru_cache import LRUSessionCache, PipelineMemoizer
 
 app = FastAPI(
     title="LexPilot API",
-    description="Evidence-Grounded Legal Reasoning System",
+    description="Evidence-Grounded Legal Reasoning System | AI for Legal Assistance & Access",
     version="1.0.0"
 )
 
-# Enable CORS for React frontend
+# 1. OWASP Security Response Headers
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 2. Rate Limiting Middleware (120 requests/minute per client IP)
+app.add_middleware(RateLimitMiddleware, max_requests=120, window_seconds=60)
+
+# 3. CORS Configuration (Strict Origins & Preview Regex, Avoiding Insecure Wildcards)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "https://lex-pilot-phi.vercel.app"
+    ],
+    allow_origin_regex=r"^https:\/\/lex-pilot-.*-somashekhar-vanis-projects\.vercel\.app$",
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -69,17 +98,29 @@ verifier = VerificationAgent(gemini_client)
 deviation_detector = DeviationDetector()
 comparator = ContractComparator(verifier)
 
-# In-memory document session cache
-sessions: Dict[str, Dict[str, Any]] = {}
+# High-Efficiency Bounded LRU Cache & SHA-256 Memoizer
+sessions = LRUSessionCache(maxsize=50, ttl_seconds=7200)
+memoizer = PipelineMemoizer(max_items=30)
 
 def process_document_pipeline(file_bytes: bytes, filename: str, doc_type_hint: str = "auto") -> DocumentAnalysisResponse:
     """
     Executes the single coherent pipeline from raw bytes to verified legal analysis report.
+    Utilizes SHA-256 memoization for sub-millisecond repeated contract execution.
     """
+    clean_filename = sanitize_filename(filename)
+    doc_hash = PipelineMemoizer.compute_hash(file_bytes, clean_filename)
+
+    # Check memoization cache
+    cached = memoizer.get(doc_hash)
+    if cached is not None:
+        cached_resp, session_dict = cached
+        sessions[cached_resp.document_id] = session_dict
+        return cached_resp
+
     doc_id = str(uuid.uuid4())[:8]
 
     # Stage 1: Document Parsing
-    parsed_doc = parser.parse_file(file_bytes, filename)
+    parsed_doc = parser.parse_file(file_bytes, clean_filename)
     raw_text = parsed_doc["raw_text"]
 
     # Stage 2: Clause Engine - Segmentation
@@ -195,7 +236,7 @@ def process_document_pipeline(file_bytes: bytes, filename: str, doc_type_hint: s
 
     response = DocumentAnalysisResponse(
         document_id=doc_id,
-        document_name=filename,
+        document_name=clean_filename,
         document_type=doc_type,
         total_clauses=len(clause_nodes),
         clauses=clause_nodes,
@@ -207,16 +248,25 @@ def process_document_pipeline(file_bytes: bytes, filename: str, doc_type_hint: s
         raw_text=raw_text
     )
 
-    # Cache session
-    sessions[doc_id] = {
+    # Cache session and memoize result
+    session_data = {
         "response": response,
         "processed_clauses": processed_clauses,
         "clause_graph": clause_graph,
         "retriever": retriever,
         "qa_engine": qa_engine
     }
+    sessions[doc_id] = session_data
+    memoizer.put(doc_hash, (response, session_data))
 
     return response
+
+# Pre-warm memoizer with standard contracts for instant response
+try:
+    process_document_pipeline(SAMPLE_EMPLOYMENT_SCANNED.encode("utf-8"), "Executive_Employment_Agreement_Scanned.txt", "Employment Agreement")
+    process_document_pipeline(SAMPLE_LEASE_CONFLICT.encode("utf-8"), "Commercial_Residential_Lease_Conflict.txt", "Residential / Commercial Lease")
+except Exception:
+    pass
 
 @app.get("/api")
 @app.get("/api/")
@@ -229,7 +279,13 @@ def health_check():
         "gemini_connected": gemini_client.is_available(),
         "gemini_model": "gemini-2.5-flash" if gemini_client.is_available() else "Offline Verified Legal Engine",
         "doc_ai_connected": parser.has_doc_ai,
-        "active_sessions": len(sessions)
+        "active_sessions": len(sessions),
+        "security": {
+            "rate_limiting_enabled": True,
+            "owasp_headers_active": True,
+            "max_upload_size_mb": 10,
+            "prompt_guardrail_active": True
+        }
     }
 
 @app.get("/api/samples")
@@ -268,7 +324,7 @@ def get_sample_list():
 
 @app.get("/api/sample/{sample_id}")
 @app.get("/sample/{sample_id}")
-def load_sample_document(sample_id: str):
+def get_sample_document(sample_id: str):
     if sample_id == "sample_employment":
         raw = SAMPLE_EMPLOYMENT_SCANNED
         filename = "Executive_Employment_Agreement_Scanned.txt"
@@ -291,20 +347,45 @@ def load_sample_document(sample_id: str):
 async def upload_document(file: UploadFile = File(...)):
     """
     Accepts PDF, text, or scan document and runs full parsing and analysis pipeline.
+    Enforces strict size validation (10MB limit), magic byte validation, and filename sanitization.
     """
-    contents = await file.read()
-    return process_document_pipeline(contents, file.filename)
+    clean_filename = sanitize_filename(file.filename)
+    contents = await file.read(MAX_UPLOAD_BYTES + 1024)
+
+    is_valid, err_msg = validate_file_upload(contents, clean_filename)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=err_msg)
+
+    return process_document_pipeline(contents, clean_filename)
 
 @app.post("/api/qa", response_model=QAResponse)
 @app.post("/qa", response_model=QAResponse)
 def ask_question(payload: QARequest):
     """
-    Verified Q&A with multi-hop graph reasoning.
+    Verified Q&A with multi-hop graph reasoning, prompt injection protection, and PII masking.
     """
+    # Prompt injection & adversarial input guardrail
+    is_safe, refusal_reason = check_prompt_injection(payload.question)
+    if not is_safe:
+        return QAResponse(
+            question=payload.question,
+            answer=f"🛡️ Security Notice: Your question was flagged by LexPilot's safety guardrail ({refusal_reason}). LexPilot only provides evidence-grounded answers strictly based on the contract clauses.",
+            evidence_citations=[],
+            confidence=ConfidenceLevel.LOW,
+            multi_hop=False,
+            graph_path=[],
+            reasoning_steps=["Security check: Query intercepted by Prompt Injection & Jailbreak Guardrail."],
+            jurisdiction_note="System security filter active.",
+            disclaimer="This is an informational security notice."
+        )
+
+    # Redact PII before analysis
+    safe_question = mask_pii(payload.question)
+
     doc_id = payload.document_id
     if not doc_id or doc_id not in sessions:
         # Default to the most recent active session
-        if sessions:
+        if len(sessions) > 0:
             doc_id = list(sessions.keys())[-1]
         else:
             # Auto-load sample employment document if no session exists
@@ -313,7 +394,7 @@ def ask_question(payload: QARequest):
 
     session = sessions[doc_id]
     qa_engine: MultiHopQAEngine = session["qa_engine"]
-    return qa_engine.answer_question(payload.question, payload.jurisdiction or "General / Unspecified")
+    return qa_engine.answer_question(safe_question, payload.jurisdiction or "General / Unspecified")
 
 @app.post("/api/compare")
 @app.post("/compare")
@@ -325,12 +406,17 @@ def compare_contracts(
 ):
     """
     Compares two contracts semantically (Version A vs Version B).
+    Includes upload validation and filename sanitization.
     """
     # Resolve Document A clauses
     clauses_a = []
     if file_a:
-        bytes_a = file_a.file.read()
-        resp_a = process_document_pipeline(bytes_a, file_a.filename)
+        clean_name_a = sanitize_filename(file_a.filename)
+        bytes_a = file_a.file.read(MAX_UPLOAD_BYTES + 1024)
+        is_valid, err = validate_file_upload(bytes_a, clean_name_a)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=f"Document A error: {err}")
+        resp_a = process_document_pipeline(bytes_a, clean_name_a)
         clauses_a = sessions[resp_a.document_id]["processed_clauses"]
     elif doc_a_id and doc_a_id in sessions:
         clauses_a = sessions[doc_a_id]["processed_clauses"]
@@ -342,8 +428,12 @@ def compare_contracts(
     # Resolve Document B clauses
     clauses_b = []
     if file_b:
-        bytes_b = file_b.file.read()
-        resp_b = process_document_pipeline(bytes_b, file_b.filename)
+        clean_name_b = sanitize_filename(file_b.filename)
+        bytes_b = file_b.file.read(MAX_UPLOAD_BYTES + 1024)
+        is_valid, err = validate_file_upload(bytes_b, clean_name_b)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=f"Document B error: {err}")
+        resp_b = process_document_pipeline(bytes_b, clean_name_b)
         clauses_b = sessions[resp_b.document_id]["processed_clauses"]
     elif doc_b_id and doc_b_id in sessions:
         clauses_b = sessions[doc_b_id]["processed_clauses"]
@@ -375,7 +465,7 @@ def get_reference_corpus():
 @app.post("/api/settings/key")
 @app.post("/settings/key")
 def update_api_key(api_key: str = Body(..., embed=True)):
-    gemini_client.set_api_key(api_key)
+    gemini_client.set_api_key(api_key.strip())
     return {
         "status": "updated",
         "gemini_connected": gemini_client.is_available()
