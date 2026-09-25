@@ -13,7 +13,10 @@ Layout-aware document parser supporting:
 import os
 import re
 from typing import List, Dict, Any, Tuple, Optional
-import fitz  # PyMuPDF
+try:
+    import fitz  # PyMuPDF
+except ImportError:
+    fitz = None
 
 class ParsedBlock:
     def __init__(self, text: str, page_number: int, block_type: str = "text", bbox: Optional[Tuple[float, float, float, float]] = None):
@@ -54,6 +57,14 @@ class DocumentParser:
         """
         Extracts layout-aware blocks, preserves clause numbering, headers, and signatures.
         """
+        if fitz is None:
+            # Fallback if PyMuPDF C-library is unavailable in a minimal serverless environment
+            try:
+                text = file_bytes.decode("utf-8", errors="replace")
+            except Exception:
+                text = str(file_bytes)
+            return self._parse_text(text, filename)
+
         doc = fitz.open(stream=file_bytes, filetype="pdf")
         pages_content = []
         all_blocks: List[ParsedBlock] = []
