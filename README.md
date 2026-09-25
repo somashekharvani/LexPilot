@@ -2,6 +2,13 @@
 
 **AI for Legal Assistance & Access**
 
+[![Live Demo](https://img.shields.io/badge/Vercel-Live%20Demo-success?style=for-the-badge&logo=vercel)](https://lex-pilot-phi.vercel.app/)
+[![API Docs](https://img.shields.io/badge/FastAPI-Swagger%20UI-009688?style=for-the-badge&logo=fastapi)](https://lex-pilot-phi.vercel.app/docs)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
+
+* 🌐 **Live Web Application:** [https://lex-pilot-phi.vercel.app/](https://lex-pilot-phi.vercel.app/)
+* 📚 **Interactive Swagger API Documentation:** [https://lex-pilot-phi.vercel.app/docs](https://lex-pilot-phi.vercel.app/docs)
+
 LexPilot is a GenAI-powered legal document analysis system that helps users understand contracts by connecting AI-generated insights directly to the source clauses that support them.
 
 Instead of providing an ungrounded summary or generic legal chatbot experience, LexPilot creates a structured, verified representation of a legal document containing:
@@ -18,6 +25,10 @@ Instead of providing an ungrounded summary or generic legal chatbot experience, 
 
 ---
 
+![LexPilot Dashboard](docs/images/dashboard.png)
+
+---
+
 ## 🏛️ Core Pipeline
 
 $$\text{Document (PDF/Scan/Text)} \longrightarrow \text{Parsing} \longrightarrow \text{Clause Segmentation} \longrightarrow \text{Classification} \longrightarrow \text{Clause Graph + Hybrid Retrieval} \longrightarrow \text{Gemini Analysis} \longrightarrow \text{Evidence Verification} \longrightarrow \text{Split-Pane UI}$$
@@ -28,6 +39,25 @@ $$\text{Document (PDF/Scan/Text)} \longrightarrow \text{Parsing} \longrightarrow
 4. **Gemini Analysis Layer:** Generates qualitative attention flags, plain-language rewrites calibrated across 3 reading levels, and answers complex multi-hop queries.
 5. **Verification Agent:** Performs a secondary entailment check verifying that cited clauses strictly support each generated statement.
 6. **Split-Pane UI:** Left pane displays the source document; right pane displays AI legal analysis with clickable citations that smoothly scroll and highlight the source clause.
+
+---
+
+## 📸 Product Screenshots
+
+### 1. Evidence-Grounded Analysis & Attention Flags
+> *Section 12 (Non-Competition) flagged as `HIGH ATTENTION` with explicit factual justifications, 36-month non-compete deviation check against CUAD commercial benchmarks, and calibrated plain-language synthesis.*
+
+![Evidence Analysis](docs/images/evidence.png)
+
+### 2. Multi-Hop Legal Q&A (2 Citations)
+> *Answering "If I terminate under Section 4, does the non-compete in Section 12 still apply?" by traversing the graph edge `SEC-4` $\rightarrow$ `SURVIVES` $\rightarrow$ `SEC-12` with High Confidence verification.*
+
+![Multi-Hop Q&A](docs/images/multihop.png)
+
+### 3. Contract Conflict Detection
+> *Side-by-side evidence analysis identifying contradictory notice windows: Section 4 (30 days' notice) contradicts Section 14 (60 days' notice).*
+
+![Conflict Detection](docs/images/conflict.png)
 
 ---
 
@@ -74,7 +104,7 @@ LexPilot is organized around a unified, end-to-end user journey:
 
 **Upload PDF → Clause Extraction → Attention Flag → Click Evidence → Active Highlight in Left Pane → Cross-Clause Conflict → Multi-Hop Q&A (2 Citations) → Obligation Timeline → Semantic Contract Comparison**
 
-Follow these 6 steps directly in the running web application ([http://127.0.0.1:8000](http://127.0.0.1:8000)):
+Follow these 6 steps directly in the running web application ([https://lex-pilot-phi.vercel.app](https://lex-pilot-phi.vercel.app)):
 
 1. **Step 1: Ingest Messy Scanned Contract**
    * Click **`1. Scanned Contract`** on the Live Demo bar (or upload your own PDF).
@@ -148,12 +178,12 @@ python backend/verify_all_live.py
 ## ⚡ Efficiency & Scalability
 
 * **Sub-Second Analysis:** In-memory graph construction and local heuristic categorization execute in $<500$ ms.
-* **Lightweight Footprint:** Entire repository size is under **1 MB** (excluding dependencies).
+* **Lightweight Footprint:** Entire repository size is under **2.5 MB** including product documentation and images (strictly within the 10 MB limit).
 * **Network Resilience:** Google Gemini API calls utilize strict request timeouts with automatic fallback to the deterministic offline legal engine.
 
 ---
 
-## 🚀 Running the Application
+## 🚀 Running the Application Locally
 
 ### Quick Start (Single Command)
 1. Start the FastAPI backend and bundled web application:
