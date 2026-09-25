@@ -219,6 +219,7 @@ def process_document_pipeline(file_bytes: bytes, filename: str, doc_type_hint: s
     return response
 
 @app.get("/api/health")
+@app.get("/health")
 def health_check():
     return {
         "status": "healthy",
@@ -230,6 +231,7 @@ def health_check():
     }
 
 @app.get("/api/samples")
+@app.get("/samples")
 def get_sample_list():
     return [
         {
@@ -263,6 +265,7 @@ def get_sample_list():
     ]
 
 @app.get("/api/sample/{sample_id}")
+@app.get("/sample/{sample_id}")
 def load_sample_document(sample_id: str):
     if sample_id == "sample_employment":
         raw = SAMPLE_EMPLOYMENT_SCANNED
@@ -282,6 +285,7 @@ def load_sample_document(sample_id: str):
     return process_document_pipeline(raw.encode("utf-8"), filename)
 
 @app.post("/api/upload")
+@app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
     """
     Accepts PDF, text, or scan document and runs full parsing and analysis pipeline.
@@ -290,6 +294,7 @@ async def upload_document(file: UploadFile = File(...)):
     return process_document_pipeline(contents, file.filename)
 
 @app.post("/api/qa", response_model=QAResponse)
+@app.post("/qa", response_model=QAResponse)
 def ask_question(payload: QARequest):
     """
     Verified Q&A with multi-hop graph reasoning.
@@ -309,6 +314,7 @@ def ask_question(payload: QARequest):
     return qa_engine.answer_question(payload.question, payload.jurisdiction or "General / Unspecified")
 
 @app.post("/api/compare")
+@app.post("/compare")
 def compare_contracts(
     doc_a_id: Optional[str] = Form(None),
     doc_b_id: Optional[str] = Form(None),
@@ -353,6 +359,7 @@ def compare_contracts(
     }
 
 @app.get("/api/corpus")
+@app.get("/corpus")
 def get_reference_corpus():
     """
     Exposes preloaded CUAD-derived template baselines across employment, NDA, lease, and MSA.
@@ -364,6 +371,7 @@ def get_reference_corpus():
     }
 
 @app.post("/api/settings/key")
+@app.post("/settings/key")
 def update_api_key(api_key: str = Body(..., embed=True)):
     gemini_client.set_api_key(api_key)
     return {
@@ -371,9 +379,9 @@ def update_api_key(api_key: str = Body(..., embed=True)):
         "gemini_connected": gemini_client.is_available()
     }
 
-# Serve built React frontend if dist directory exists
+# Serve built React frontend if dist directory exists and not on Vercel
 frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
-if os.path.exists(frontend_dist):
+if os.path.exists(frontend_dist) and not os.getenv("VERCEL"):
     from fastapi.staticfiles import StaticFiles
     from fastapi.responses import FileResponse
 

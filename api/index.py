@@ -18,6 +18,21 @@ if str(backend_dir) not in sys.path:
 # Import the FastAPI application instance
 from backend.app.main import app
 
+@app.middleware("http")
+async def vercel_path_normalizer(request, call_next):
+    # Check if Vercel passed original requested path in headers
+    matched = request.headers.get("x-matched-path")
+    if matched:
+        request.scope["path"] = matched
+    else:
+        path = request.scope.get("path", "")
+        for prefix in ["/api/index.py", "/index.py"]:
+            if path.startswith(prefix):
+                path = path[len(prefix):] or "/"
+                break
+        request.scope["path"] = path
+    return await call_next(request)
+
 try:
     from mangum import Mangum
     handler = Mangum(app, lifespan="off")
