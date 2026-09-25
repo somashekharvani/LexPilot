@@ -20,17 +20,14 @@ from backend.app.main import app
 
 @app.middleware("http")
 async def vercel_path_normalizer(request, call_next):
-    # Check if Vercel passed original requested path in headers
-    matched = request.headers.get("x-matched-path")
-    if matched:
-        request.scope["path"] = matched
-    else:
-        path = request.scope.get("path", "")
-        for prefix in ["/api/index.py", "/index.py"]:
-            if path.startswith(prefix):
-                path = path[len(prefix):] or "/"
-                break
-        request.scope["path"] = path
+    # Check if __path query parameter was passed by Vercel rewrite
+    query_str = request.scope.get("query_string", b"").decode("utf-8")
+    if "__path=" in query_str:
+        import urllib.parse
+        parsed = urllib.parse.parse_qs(query_str)
+        if "__path" in parsed and parsed["__path"]:
+            sub = parsed["__path"][0].lstrip("/")
+            request.scope["path"] = "/" + sub
     return await call_next(request)
 
 try:

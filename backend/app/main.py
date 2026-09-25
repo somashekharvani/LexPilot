@@ -17,7 +17,7 @@ Single coherent pipeline orchestrating:
 import os
 import uuid
 from typing import Dict, Any, List, Optional
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Body
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -228,6 +228,14 @@ def health_check():
         "gemini_model": "gemini-2.5-flash" if gemini_client.is_available() else "Offline Verified Legal Engine",
         "doc_ai_connected": parser.has_doc_ai,
         "active_sessions": len(sessions)
+    }
+
+@app.get("/api/debug-headers")
+@app.get("/debug-headers")
+def debug_headers(request: Request):
+    return {
+        "headers": dict(request.headers),
+        "scope_path": request.scope.get("path")
     }
 
 @app.get("/api/samples")
