@@ -27,10 +27,10 @@ export default function DocumentViewer({
     if (!searchTerm) return true;
     const q = searchTerm.toLowerCase();
     return (
-      c.title.toLowerCase().includes(q) ||
-      c.text.toLowerCase().includes(q) ||
-      c.category.toLowerCase().includes(q) ||
-      c.id.toLowerCase().includes(q)
+      (c.title || "").toLowerCase().includes(q) ||
+      (c.text || "").toLowerCase().includes(q) ||
+      (c.category || "").toLowerCase().includes(q) ||
+      (c.id || "").toLowerCase().includes(q)
     );
   });
 

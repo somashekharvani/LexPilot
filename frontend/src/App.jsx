@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   HelpCircle,
+  Sparkles,
 } from "lucide-react";
 import Header from "./components/Header";
 import DocumentViewer from "./components/DocumentViewer";
@@ -37,6 +38,24 @@ export default function App() {
   });
   const [isLoading, setIsLoading] = useState(false);
 
+  const handleLoadSample = async (sampleId) => {
+    setIsLoading(true);
+    setSelectedSampleId(sampleId);
+    try {
+      const data = await loadSample(sampleId);
+      setDocData(data);
+      if (data?.clauses?.length > 0) {
+        // Default select first high attention clause or first clause
+        const highClause = data.clauses.find((c) => String(c.attention_level || "").toLowerCase().includes("high"));
+        setSelectedClauseId(highClause ? highClause.id : data.clauses[0].id);
+      }
+    } catch (err) {
+      console.error("Failed to load sample contract:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Initialize and sync with live backend
   useEffect(() => {
     checkHealth().then(setHealthData).catch(console.error);
@@ -52,24 +71,6 @@ export default function App() {
         console.warn("Using offline bundled samples:", err);
       });
   }, []);
-
-  const handleLoadSample = async (sampleId) => {
-    setIsLoading(true);
-    setSelectedSampleId(sampleId);
-    try {
-      const data = await loadSample(sampleId);
-      setDocData(data);
-      if (data.clauses?.length > 0) {
-        // Default select first high attention clause or first clause
-        const highClause = data.clauses.find((c) => c.attention_level.includes("High"));
-        setSelectedClauseId(highClause ? highClause.id : data.clauses[0].id);
-      }
-    } catch (err) {
-      console.error("Failed to load sample contract:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleUploadFile = async (file) => {
     setIsLoading(true);
