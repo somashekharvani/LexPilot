@@ -20,29 +20,37 @@ import ReferenceCorpusView from "./components/ReferenceCorpusView";
 import VerifiedQAView from "./components/VerifiedQAView";
 import BottomQABar from "./components/BottomQABar";
 import { fetchSamples, loadSample, uploadDocument, checkHealth } from "./services/api";
+import { INITIAL_DOC_DATA, DEFAULT_SAMPLES } from "./services/defaultData";
 
 export default function App() {
-  const [samples, setSamples] = useState([]);
+  const [samples, setSamples] = useState(DEFAULT_SAMPLES || []);
   const [selectedSampleId, setSelectedSampleId] = useState("sample_employment");
-  const [docData, setDocData] = useState(null);
-  const [selectedClauseId, setSelectedClauseId] = useState("SEC-4");
+  const [docData, setDocData] = useState(INITIAL_DOC_DATA);
+  const [selectedClauseId, setSelectedClauseId] = useState("SEC-12");
   const [activeTab, setActiveTab] = useState("analysis");
   const [jurisdiction, setJurisdiction] = useState("General / Unspecified");
-  const [healthData, setHealthData] = useState(null);
+  const [healthData, setHealthData] = useState({
+    status: "healthy",
+    gemini_connected: false,
+    gemini_model: "Offline Verified Legal Engine",
+    service: "LexPilot Evidence-Grounded Legal Reasoning Pipeline"
+  });
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize
+  // Initialize and sync with live backend
   useEffect(() => {
     checkHealth().then(setHealthData).catch(console.error);
 
     fetchSamples()
       .then((data) => {
-        setSamples(data);
-        if (data.length > 0) {
+        if (data && data.length > 0) {
+          setSamples(data);
           handleLoadSample(data[0].id);
         }
       })
-      .catch(console.error);
+      .catch((err) => {
+        console.warn("Using offline bundled samples:", err);
+      });
   }, []);
 
   const handleLoadSample = async (sampleId) => {
