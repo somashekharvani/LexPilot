@@ -230,14 +230,6 @@ def health_check():
         "active_sessions": len(sessions)
     }
 
-@app.get("/api/debug-headers")
-@app.get("/debug-headers")
-def debug_headers(request: Request):
-    return {
-        "headers": dict(request.headers),
-        "scope_path": request.scope.get("path")
-    }
-
 @app.get("/api/samples")
 @app.get("/samples")
 def get_sample_list():
