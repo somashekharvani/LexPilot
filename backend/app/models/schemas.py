@@ -17,6 +17,17 @@ class ReadingLevel(str, Enum):
     EXECUTIVE = "executive" # C-Suite / commercial impact summary
     TECHNICAL = "technical" # Paralegal / contract specialist
 
+class ConflictType(str, Enum):
+    TEMPORAL = "TEMPORAL"       # Notice period, cure period, milestone timeline clashes
+    AMOUNT = "AMOUNT"           # Monetary fee, deposit, or penalty calculation contradictions
+    OBLIGATION = "OBLIGATION"   # Direct duties contradiction, capped liability vs uncapped indemnity
+    SCOPE = "SCOPE"             # Geographic, subject matter, or exclusivity scope contradictions
+    DEFINITION = "DEFINITION"   # Conflicting defined terms across document
+    SURVIVAL = "SURVIVAL"       # Termination vs survival mandate contradiction
+    CONDITIONAL = "CONDITIONAL" # Conflicting conditional priority or "notwithstanding" clauses
+
+from .legal_ir import LegalIRClause
+
 class StructuredFields(BaseModel):
     parties_involved: List[str] = Field(default_factory=list)
     dates: List[str] = Field(default_factory=list)
@@ -34,6 +45,7 @@ class ClauseNode(BaseModel):
     line_start: int = 0
     line_end: int = 0
     fields: StructuredFields = Field(default_factory=StructuredFields)
+    legal_ir: Optional[LegalIRClause] = None
     attention_level: AttentionLevel = AttentionLevel.NORMAL
     attention_reasons: List[str] = Field(default_factory=list)
     plain_language: Dict[str, str] = Field(default_factory=dict)
@@ -58,6 +70,7 @@ class ContractConflict(BaseModel):
     clause_b_title: str
     clause_b_excerpt: str
     conflict_type: str
+    typed_category: ConflictType = ConflictType.TEMPORAL
     explanation: str
     attention_level: AttentionLevel = AttentionLevel.HIGH
     confidence: ConfidenceLevel = ConfidenceLevel.HIGH
@@ -96,6 +109,23 @@ class Citation(BaseModel):
     quote: str
     page_number: int = 1
 
+class SupportingClauseSpan(BaseModel):
+    clause_id: str
+    title: str = ""
+    page: int = 1
+    char_start: int = 0
+    char_end: int = 0
+    quote: str = ""
+
+class ProvenanceRecord(BaseModel):
+    claim_id: str
+    claim_text: str
+    reasoning_step: str = ""
+    supporting_clauses: List[SupportingClauseSpan] = Field(default_factory=list)
+    entailment_result: str = "PASS"  # PASS, PARTIAL, INCONCLUSIVE
+    confidence: ConfidenceLevel = ConfidenceLevel.HIGH
+    verification_details: str = ""
+
 class QARequest(BaseModel):
     question: str
     document_id: Optional[str] = None
@@ -105,6 +135,7 @@ class QAResponse(BaseModel):
     question: str
     answer: str
     citations: List[Citation] = Field(default_factory=list)
+    provenance: List[ProvenanceRecord] = Field(default_factory=list)
     confidence: ConfidenceLevel = ConfidenceLevel.HIGH
     multi_hop: bool = False
     graph_path: List[str] = Field(default_factory=list)

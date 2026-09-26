@@ -76,7 +76,14 @@ export default function GraphVisualizer({ clauses = [], edges = [], conflicts = 
               className="bg-rose-950/20 border border-rose-500/40 rounded-2xl p-4 shadow-sm space-y-3"
             >
               <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-rose-300">{conf.conflict_type}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-xs text-rose-300">{conf.conflict_type}</span>
+                  {conf.typed_category && (
+                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold rounded bg-rose-900/70 border border-rose-500/50 text-rose-200 uppercase tracking-wider">
+                      {conf.typed_category}
+                    </span>
+                  )}
+                </div>
                 <ConfidenceBadge level={conf.confidence} inline />
               </div>
 

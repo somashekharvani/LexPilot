@@ -14,10 +14,14 @@ from typing import List, Dict, Any
 
 class FieldExtractor:
     def __init__(self):
-        # Known common legal roles compiled into a single high-efficiency pass
-        self.roles_regex = re.compile(
-            r'\b(?:Company|Client|Contractor|Employee|Employer|Consultant|Vendor|Customer|Landlord|Tenant|Lessor|Lessee|Disclosing Party|Receiving Party|Licensor|Licensee|Service Provider|Party|Parties)\b'
-        )
+        # Known common legal roles
+        self.known_roles = [
+            r'\bCompany\b', r'\bClient\b', r'\bContractor\b', r'\bEmployee\b',
+            r'\bEmployer\b', r'\bConsultant\b', r'\bVendor\b', r'\bCustomer\b',
+            r'\bLandlord\b', r'\bTenant\b', r'\bLessor\b', r'\bLessee\b',
+            r'\bDisclosing Party\b', r'\bReceiving Party\b', r'\bLicensor\b',
+            r'\bLicensee\b', r'\bService Provider\b', r'\bParty\b', r'\bParties\b'
+        ]
 
         # Regex for dates, timeframes, and deadlines
         self.date_regex = re.compile(
@@ -57,8 +61,12 @@ class FieldExtractor:
         }
 
     def _extract_parties(self, text: str) -> List[str]:
-        matches = self.roles_regex.findall(text)
-        return sorted(list(set(matches)))
+        found = set()
+        for role_pat in self.known_roles:
+            m = re.findall(role_pat, text)
+            if m:
+                found.add(m[0])
+        return sorted(list(found))
 
     def _extract_dates(self, text: str) -> List[str]:
         matches = self.date_regex.findall(text)

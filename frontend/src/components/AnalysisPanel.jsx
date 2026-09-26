@@ -21,6 +21,7 @@ export default function AnalysisPanel({
   readingLevel = "general",
   onSelectClause,
   allEdges = [],
+  conflicts = [],
 }) {
   const [activeReadingLevel, setActiveReadingLevel] = useState(readingLevel);
 
@@ -72,6 +73,48 @@ export default function AnalysisPanel({
           <span>{clause.disclaimer}</span>
         </div>
       </div>
+
+      {/* Active Typed Conflicts Involving This Clause */}
+      {(() => {
+        const clauseConflicts = conflicts.filter(
+          (c) => c.clause_a_id === clause.id || c.clause_b_id === clause.id
+        );
+        if (clauseConflicts.length === 0) return null;
+        return (
+          <div className="bg-rose-950/30 border border-rose-500/50 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-rose-300 uppercase tracking-wider">
+                <AlertTriangle className="w-4 h-4 text-rose-400" />
+                <span>Cross-Clause Conflict Involving This Section</span>
+              </div>
+            </div>
+            {clauseConflicts.map((c) => {
+              const counterpartId = c.clause_a_id === clause.id ? c.clause_b_id : c.clause_a_id;
+              const counterpartTitle = c.clause_a_id === clause.id ? c.clause_b_title : c.clause_a_title;
+              return (
+                <div key={c.id} className="space-y-2 bg-slate-950/70 p-3 rounded-xl border border-rose-900/40">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-xs text-rose-200">{c.conflict_type}</span>
+                    {c.typed_category && (
+                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold rounded bg-rose-900/80 border border-rose-500/60 text-rose-200 uppercase tracking-wider">
+                        {c.typed_category}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">{c.explanation}</p>
+                  <button
+                    onClick={() => onSelectClause(counterpartId)}
+                    className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 transition"
+                  >
+                    <span>Inspect conflicting counterpart: {counterpartTitle} ({counterpartId})</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Why Flagged (Explicit Reasoning) */}
       <div className="bg-slate-900/80 rounded-2xl p-4 border border-slate-800/80 space-y-2.5">

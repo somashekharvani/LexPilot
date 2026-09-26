@@ -267,6 +267,7 @@ export default function App() {
                 clause={selectedClause}
                 onSelectClause={(cid) => setSelectedClauseId(cid)}
                 allEdges={docData?.graph_edges || []}
+                conflicts={docData?.conflicts || []}
               />
             )}
 

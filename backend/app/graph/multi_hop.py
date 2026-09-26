@@ -8,9 +8,12 @@ to answer questions spanning two or more clauses, guaranteeing multi-clause cita
 
 import re
 from typing import List, Dict, Any, Optional, Tuple
-from ..models.schemas import QAResponse, Citation, ConfidenceLevel
+from ..models.schemas import (
+    QAResponse, Citation, ConfidenceLevel, SupportingClauseSpan, ProvenanceRecord
+)
 from .clause_graph import ClauseGraph
 from ..search.hybrid_retriever import HybridRetriever
+from ..search.query_planner import QueryPlanner
 from ..verification.verifier import VerificationAgent
 from ..analysis.gemini_analyzer import GeminiClient
 
@@ -20,54 +23,40 @@ class MultiHopQAEngine:
         self.retriever = retriever
         self.verifier = verifier
         self.gemini = gemini_client
+        self.planner = QueryPlanner()
 
     def answer_question(self, question: str, jurisdiction: str = "General / Unspecified") -> QAResponse:
         """
         Answers a user question grounded strictly in source clauses.
-        Traverses multi-hop graph connections when questions span multiple covenants.
+        Uses QueryPlanner to bias category retrieval and 1-hop graph expansion.
         """
-        q_lower = question.lower()
+        # Step 1: Execute Query Planning & Intent Classification
+        plan = self.planner.plan_query(question)
 
-        # Step 1: Detect if specific section numbers are mentioned in query (e.g. "Section 4", "Section 12")
-        explicit_sec_nums = re.findall(r'\b(?:section|sec\.?|clause|article)\s+([0-9IVXLCDM]+(?:\.[0-9]+)*)', q_lower)
+        # Case A: Two explicit sections mentioned
+        if len(plan.explicit_sections) >= 2:
+            return self._handle_two_section_multi_hop(plan.explicit_sections[0], plan.explicit_sections[1], question, jurisdiction)
 
-        # Step 2: Retrieve top relevant clauses using hybrid search
-        search_results = self.retriever.search(question, top_k=4)
-        top_clauses = [c for c, score in search_results]
+        # Step 2: Planned Retrieval with Category Biasing & 1-Hop Graph Expansion
+        evidence_clauses = self.planner.execute_planned_retrieval(question, self.retriever, self.graph, top_k=3)
 
         # Step 3: Check for multi-hop graph conditions
-        # Case A: Two explicit sections mentioned
-        if len(explicit_sec_nums) >= 2:
-            return self._handle_two_section_multi_hop(explicit_sec_nums[0], explicit_sec_nums[1], question, jurisdiction)
+        if plan.intent_type in ["MULTI_HOP_SURVIVAL", "CROSS_CLAUSE_CONFLICT", "MULTI_HOP_RELATIONSHIP"] and len(evidence_clauses) >= 2:
+            primary_clause = evidence_clauses[0]
+            # Select secondary clause from planned evidence
+            secondary_clause = evidence_clauses[1]
+            relation = self._find_edge_relation(primary_clause["id"], secondary_clause["id"])
 
-        # Case B: Keywords indicate multi-hop question (e.g. "terminate" + "non-compete", "survive", "override", "conflict")
-        is_multi_hop_query = any(k in q_lower for k in [
-            "survive", "still apply", "after termination", "override", "conflict",
-            "non-compete", "liability cap", "indemnif"
-        ])
-
-        if is_multi_hop_query and top_clauses:
-            primary_clause = top_clauses[0]
-            connected_clauses = self.graph.get_connected_clauses(primary_clause["id"])
-
-            if connected_clauses:
-                # Find connected clause that matches secondary keywords
-                secondary_clause = connected_clauses[0]
-                for cc in connected_clauses:
-                    if cc.get("category") in q_lower or any(word in cc.get("title", "").lower() for word in q_lower.split()):
-                        secondary_clause = cc
-                        break
-
-                return self._synthesize_multi_hop_answer(
-                    clause_a=primary_clause,
-                    clause_b=secondary_clause,
-                    question=question,
-                    jurisdiction=jurisdiction,
-                    relation_type=self._find_edge_relation(primary_clause["id"], secondary_clause["id"])
-                )
+            return self._synthesize_multi_hop_answer(
+                clause_a=primary_clause,
+                clause_b=secondary_clause,
+                question=question,
+                jurisdiction=jurisdiction,
+                relation_type=relation
+            )
 
         # Single clause or top retrieved clauses Q&A
-        return self._synthesize_single_clause_answer(top_clauses, question, jurisdiction)
+        return self._synthesize_single_clause_answer(evidence_clauses, question, jurisdiction)
 
     def _handle_two_section_multi_hop(self, num_a: str, num_b: str, question: str, jurisdiction: str) -> QAResponse:
         """
@@ -159,16 +148,65 @@ class MultiHopQAEngine:
                 f"The rights under {title_a} are conditioned upon compliance with {title_b}, requiring both clauses to be read together."
             )
 
-        # Entailment verification pass
-        confidence, verif_reason = self.verifier.verify_qa_answer(
-            cited_texts=[text_a, text_b],
-            answer=answer
+        # Structured Claim Validation against parsed Legal-IR clause IDs & Entailment
+        legal_ir_map = {
+            cid: cdata.get("legal_ir")
+            for cid, cdata in self.graph.clause_nodes.items()
+            if cdata.get("legal_ir") is not None
+        }
+        claim_summary = answer.split(". ")[0] + "."
+        cited_ids = [clause_a["id"], clause_b["id"]]
+        clause_texts = {
+            clause_a["id"]: text_a,
+            clause_b["id"]: text_b
+        }
+
+        entailment_res, confidence, verif_reason = self.verifier.verify_structured_claim(
+            claim_text=answer,
+            cited_clause_ids=cited_ids,
+            legal_ir_map=legal_ir_map,
+            clause_texts=clause_texts
         )
+
+        # Build explicit Provenance Chain:
+        # USER QUESTION -> CLAIM -> REASONING STEP -> CLAUSE -> EXACT EVIDENCE SPAN -> PAGE -> VERIFICATION RESULT
+        legal_ir_a = clause_a.get("legal_ir")
+        legal_ir_b = clause_b.get("legal_ir")
+
+        span_a = SupportingClauseSpan(
+            clause_id=clause_a["id"],
+            title=title_a,
+            page=clause_a.get("page_number", 1),
+            char_start=legal_ir_a.evidence_span.char_start if legal_ir_a and hasattr(legal_ir_a, "evidence_span") else 0,
+            char_end=legal_ir_a.evidence_span.char_end if legal_ir_a and hasattr(legal_ir_a, "evidence_span") else len(text_a),
+            quote=quote_a
+        )
+        span_b = SupportingClauseSpan(
+            clause_id=clause_b["id"],
+            title=title_b,
+            page=clause_b.get("page_number", 1),
+            char_start=legal_ir_b.evidence_span.char_start if legal_ir_b and hasattr(legal_ir_b, "evidence_span") else 0,
+            char_end=legal_ir_b.evidence_span.char_end if legal_ir_b and hasattr(legal_ir_b, "evidence_span") else len(text_b),
+            quote=quote_b
+        )
+
+        provenance = [
+            ProvenanceRecord(
+                claim_id="CLAIM-1",
+                claim_text=claim_summary,
+                reasoning_step=f"Traversed graph edge '{relation_type}' from {clause_a['id']} to {clause_b['id']} and harmonized covenants.",
+                supporting_clauses=[span_a, span_b],
+                entailment_result=entailment_res,
+                confidence=confidence,
+                verification_details=verif_reason
+            )
+        ]
 
         return QAResponse(
             question=question,
             answer=answer,
             citations=citations,
+            provenance=provenance,
             confidence=confidence,
             multi_hop=True,
             graph_path=graph_path,
@@ -202,12 +240,50 @@ class MultiHopQAEngine:
         plain_general = c.get("plain_language", {}).get("general")
         answer = f"According to {title}: {quote} {plain_general if plain_general else ''}".strip()
 
-        confidence, _ = self.verifier.verify_qa_answer([text], answer)
+        # Structured Claim Validation against parsed Legal-IR clause IDs & Entailment
+        legal_ir_map = {
+            cid: cdata.get("legal_ir")
+            for cid, cdata in self.graph.clause_nodes.items()
+            if cdata.get("legal_ir") is not None
+        }
+        claim_text = answer[:180]
+        cited_ids = [c["id"]]
+        clause_texts = {c["id"]: text}
+
+        entailment_res, confidence, verif_reason = self.verifier.verify_structured_claim(
+            claim_text=claim_text,
+            cited_clause_ids=cited_ids,
+            legal_ir_map=legal_ir_map,
+            clause_texts=clause_texts
+        )
+
+        legal_ir = c.get("legal_ir")
+        span = SupportingClauseSpan(
+            clause_id=c["id"],
+            title=title,
+            page=c.get("page_number", 1),
+            char_start=legal_ir.evidence_span.char_start if legal_ir and hasattr(legal_ir, "evidence_span") else 0,
+            char_end=legal_ir.evidence_span.char_end if legal_ir and hasattr(legal_ir, "evidence_span") else len(text),
+            quote=quote
+        )
+
+        provenance = [
+            ProvenanceRecord(
+                claim_id="CLAIM-1",
+                claim_text=claim_text,
+                reasoning_step=f"Located governing terms in {title} ({c['id']}) via hybrid retrieval and verified entailment.",
+                supporting_clauses=[span],
+                entailment_result=entailment_res,
+                confidence=confidence,
+                verification_details=verif_reason
+            )
+        ]
 
         return QAResponse(
             question=question,
             answer=answer,
             citations=citations,
+            provenance=provenance,
             confidence=confidence,
             multi_hop=False,
             graph_path=[c["id"]],

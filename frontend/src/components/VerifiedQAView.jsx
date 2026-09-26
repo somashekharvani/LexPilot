@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MessageSquare, Send, Sparkles, Network, ArrowRight, ShieldCheck, CheckCircle2, AlertTriangle } from "lucide-react";
+import { MessageSquare, Send, Sparkles, Network, ArrowRight, ShieldCheck, CheckCircle2, AlertTriangle, GitCommit } from "lucide-react";
 import ConfidenceBadge from "./ConfidenceBadge";
 import { askQuestion } from "../services/api";
 
@@ -23,6 +23,34 @@ export default function VerifiedQAView({ docId, jurisdiction, onSelectClause }) 
           title: "NON-COMPETITION AND RESTRICTIVE COVENANTS",
           quote: "(a) Non-Compete: During the term of employment and for a period of thirty-six (36) months following the termination of employment... Employee shall not directly engage in competitive business.",
           page_number: 1,
+        },
+      ],
+      provenance: [
+        {
+          claim_id: "CLAIM-1",
+          claim_text: "Section 12 (Non-Competition) explicitly survives any termination or expiration of the Agreement pursuant to Section 4(d).",
+          reasoning_step: "Traversed graph edge 'SURVIVES' linking Section 4 to Section 12, harmonizing post-termination covenants.",
+          supporting_clauses: [
+            {
+              clause_id: "SEC-4",
+              title: "TERM AND TERMINATION",
+              page: 1,
+              char_start: 840,
+              char_end: 935,
+              quote: "(d) Survival of Provisions: Sections 3, 12, and 14 shall explicitly survive...",
+            },
+            {
+              clause_id: "SEC-12",
+              title: "NON-COMPETITION AND RESTRICTIVE COVENANTS",
+              page: 1,
+              char_start: 1120,
+              char_end: 1240,
+              quote: "(a) Non-Compete: During the term and for 36 months following termination...",
+            },
+          ],
+          entailment_result: "PASS",
+          confidence: "High",
+          verification_details: "Grounding verified: 100% factual entailment confirmed directly from cited clauses.",
         },
       ],
       confidence: "High",
@@ -194,6 +222,97 @@ export default function VerifiedQAView({ docId, jurisdiction, onSelectClause }) 
                   ))}
                 </div>
               </div>
+
+              {/* Provenance Chain Accordion (Why This Answer?) */}
+              {item.provenance?.length > 0 && (
+                <details className="group/prov rounded-xl border border-slate-800 bg-slate-950/60 p-3 transition" open>
+                  <summary className="cursor-pointer text-[11px] font-bold text-indigo-300 uppercase tracking-wider flex items-center justify-between select-none">
+                    <span className="flex items-center gap-1.5">
+                      <Network className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Why this answer? (Provenance Chain &amp; Evidence Spans)</span>
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-mono group-open/prov:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <div className="mt-3 space-y-3 pt-2 border-t border-slate-800/80">
+                    {/* Visual Reasoning Flow Diagram */}
+                    {item.multi_hop && item.graph_path?.length >= 2 && (
+                      <div className="bg-slate-950/80 p-3 rounded-xl border border-indigo-900/40 space-y-2">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-300 uppercase tracking-wider">
+                          <GitCommit className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>Reasoning Provenance Flow (Multi-Hop)</span>
+                        </div>
+                        <div className="flex items-center gap-2 overflow-x-auto py-1 text-[11px] font-mono">
+                          <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 shrink-0">
+                            Query
+                          </div>
+                          <ArrowRight className="w-3 h-3 text-slate-500 shrink-0" />
+                          <div
+                            onClick={() => onSelectClause(item.graph_path[0])}
+                            className="px-2.5 py-1 rounded-lg bg-indigo-950/80 hover:bg-indigo-900/80 border border-indigo-600/50 text-indigo-200 cursor-pointer transition shrink-0"
+                          >
+                            Seed: {item.graph_path[0]}
+                          </div>
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-800/40 text-[10px] text-cyan-300 shrink-0">
+                            <span>1-Hop Graph Traverse</span>
+                          </div>
+                          <ArrowRight className="w-3 h-3 text-slate-500 shrink-0" />
+                          <div
+                            onClick={() => onSelectClause(item.graph_path[1])}
+                            className="px-2.5 py-1 rounded-lg bg-indigo-950/80 hover:bg-indigo-900/80 border border-indigo-600/50 text-indigo-200 cursor-pointer transition shrink-0"
+                          >
+                            Target: {item.graph_path[1]}
+                          </div>
+                          <ArrowRight className="w-3 h-3 text-slate-500 shrink-0" />
+                          <div className="px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-600/50 text-emerald-200 font-bold shrink-0">
+                            ✓ Entailed Claim
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {item.provenance.map((prov, pIdx) => (
+                      <div key={pIdx} className="space-y-2 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/50">
+                            Claim: {prov.claim_id}
+                          </span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-700/50">
+                            Entailment: {prov.entailment_result} ({prov.confidence})
+                          </span>
+                        </div>
+                        <p className="text-slate-200 text-xs italic bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
+                          "{prov.claim_text}"
+                        </p>
+                        <div className="text-[11px] text-slate-300 bg-slate-950/40 p-2 rounded-lg border border-slate-900">
+                          <strong className="text-indigo-300">Reasoning Step:</strong> {prov.reasoning_step}
+                        </div>
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                            Exact Supporting Evidence Spans:
+                          </span>
+                          {prov.supporting_clauses?.map((sc, scIdx) => (
+                            <div
+                              key={scIdx}
+                              onClick={() => onSelectClause(sc.clause_id)}
+                              className="cursor-pointer bg-slate-900/60 hover:bg-slate-800/80 p-2 rounded-lg border border-slate-800/80 flex items-center justify-between text-[11px] transition"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-indigo-400">{sc.clause_id}</span>
+                                <span className="text-slate-300 truncate max-w-xs">{sc.title}</span>
+                              </div>
+                              <div className="flex items-center gap-2 font-mono text-[10px] text-slate-400">
+                                <span>Page {sc.page}</span>
+                                <span>Chars {sc.char_start}–{sc.char_end}</span>
+                                <span className="text-emerald-400 font-bold">✓ Verified</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
 
               {/* Jurisdiction Note & Disclaimer */}
               <div className="text-[11px] text-slate-400 pt-1 border-t border-slate-800/60 flex items-center justify-between">
