@@ -27,34 +27,46 @@ export default function ReferenceCorpusView() {
       </div>
 
       {/* Contract Type Tabs */}
-      <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+      <div
+        role="tablist"
+        aria-label="Reference corpus contract types"
+        className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs"
+      >
         <button
+          role="tab"
+          aria-selected={selectedType === "employment"}
           onClick={() => setSelectedType("employment")}
-          className={`px-3 py-1.5 rounded-lg transition font-medium ${
+          className={`px-3 py-1.5 rounded-lg transition font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
             selectedType === "employment" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
           }`}
         >
           Employment Agreement
         </button>
         <button
+          role="tab"
+          aria-selected={selectedType === "nda"}
           onClick={() => setSelectedType("nda")}
-          className={`px-3 py-1.5 rounded-lg transition font-medium ${
+          className={`px-3 py-1.5 rounded-lg transition font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
             selectedType === "nda" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
           }`}
         >
           Non-Disclosure (NDA)
         </button>
         <button
+          role="tab"
+          aria-selected={selectedType === "residential_lease"}
           onClick={() => setSelectedType("residential_lease")}
-          className={`px-3 py-1.5 rounded-lg transition font-medium ${
+          className={`px-3 py-1.5 rounded-lg transition font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
             selectedType === "residential_lease" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
           }`}
         >
           Residential / Commercial Lease
         </button>
         <button
+          role="tab"
+          aria-selected={selectedType === "msa"}
           onClick={() => setSelectedType("msa")}
-          className={`px-3 py-1.5 rounded-lg transition font-medium ${
+          className={`px-3 py-1.5 rounded-lg transition font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
             selectedType === "msa" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
           }`}
         >
@@ -64,7 +76,7 @@ export default function ReferenceCorpusView() {
 
       {/* Provenance Disclosure Banner per hackathon constraints */}
       <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800/80 text-xs text-slate-400 flex items-center gap-2">
-        <Scale className="w-4 h-4 text-indigo-400 shrink-0" />
+        <Scale className="w-4 h-4 text-indigo-400 shrink-0" aria-hidden="true" />
         <span>
           <strong>Provenance:</strong> {corpusData?.provenance || "Derived from publicly available sample contracts and the CUAD dataset. Preloaded locally as baseline benchmarks without model fine-tuning."}
         </span>
@@ -85,7 +97,7 @@ export default function ReferenceCorpusView() {
                 <h3 className="text-xs font-bold text-slate-100">{val.standard_title}</h3>
               </div>
               <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+                <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
                 Template Benchmark
               </span>
             </div>

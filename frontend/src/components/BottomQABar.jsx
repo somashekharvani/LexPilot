@@ -27,7 +27,12 @@ export default function BottomQABar({ docId, jurisdiction, onSelectClause, onOpe
     <div className="relative border-t border-slate-800 bg-slate-900/95 backdrop-blur px-4 py-2.5 z-20 shadow-lg">
       {/* Pop-up result drawer if quickResult is present */}
       {quickResult && (
-        <div className="absolute bottom-full left-4 right-4 mb-2 bg-slate-900 border border-slate-700/80 rounded-2xl p-4 shadow-2xl max-h-80 overflow-y-auto space-y-2.5 animate-in slide-in-from-bottom-2">
+        <div
+          role="region"
+          aria-label="Quick Question Answer"
+          aria-live="polite"
+          className="absolute bottom-full left-4 right-4 mb-2 bg-slate-900 border border-slate-700/80 rounded-2xl p-4 shadow-2xl max-h-80 overflow-y-auto space-y-2.5 animate-in slide-in-from-bottom-2"
+        >
           <div className="flex items-center justify-between pb-2 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-100">{quickResult.question}</span>
@@ -35,9 +40,10 @@ export default function BottomQABar({ docId, jurisdiction, onSelectClause, onOpe
             </div>
             <button
               onClick={() => setQuickResult(null)}
-              className="text-slate-400 hover:text-white p-1 rounded-lg"
+              aria-label="Close answer drawer"
+              className="text-slate-400 hover:text-white p-1 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
 
@@ -51,14 +57,15 @@ export default function BottomQABar({ docId, jurisdiction, onSelectClause, onOpe
               {quickResult.citations.map((c, i) => (
                 <button
                   key={i}
+                  aria-label={`View cited clause ${c.title} (${c.clause_id})`}
                   onClick={() => {
                     onSelectClause(c.clause_id);
                     setQuickResult(null);
                   }}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-300 bg-indigo-950/60 hover:bg-indigo-900/60 px-2.5 py-1 rounded-lg border border-indigo-500/40 transition"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-300 bg-indigo-950/60 hover:bg-indigo-900/60 px-2.5 py-1 rounded-lg border border-indigo-500/40 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
                 >
                   <span>Cite: {c.title} ({c.clause_id})</span>
-                  <ArrowRight className="w-3 h-3" />
+                  <ArrowRight className="w-3 h-3" aria-hidden="true" />
                 </button>
               ))}
             </div>

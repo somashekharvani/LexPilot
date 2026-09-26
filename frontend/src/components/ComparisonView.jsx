@@ -49,16 +49,17 @@ export default function ComparisonView({ onSelectClause }) {
         <button
           onClick={handleRunSampleComparison}
           disabled={isLoading}
-          className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition disabled:opacity-50"
+          aria-label="Compare Sample Master Services Agreement Version 1 versus Version 2"
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} aria-hidden="true" />
           <span>{comparisonData ? "Re-Run MSA Comparison" : "Compare Sample MSA V1 vs. V2"}</span>
         </button>
       </div>
 
       {!comparisonData && !isLoading ? (
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 text-center space-y-4">
-          <div className="w-12 h-12 rounded-full bg-indigo-950 flex items-center justify-center mx-auto text-indigo-400 border border-indigo-500/30">
+          <div className="w-12 h-12 rounded-full bg-indigo-950 flex items-center justify-center mx-auto text-indigo-400 border border-indigo-500/30" aria-hidden="true">
             <GitCompare className="w-6 h-6" />
           </div>
           <div>
@@ -73,34 +74,46 @@ export default function ComparisonView({ onSelectClause }) {
       {/* Filter Tabs */}
       {comparisonData && (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+          <div
+            role="tablist"
+            aria-label="Filter contract comparison clauses by change type"
+            className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs"
+          >
             <button
+              role="tab"
+              aria-selected={filter === "all"}
               onClick={() => setFilter("all")}
-              className={`px-3 py-1 rounded-lg transition font-medium ${
+              className={`px-3 py-1 rounded-lg transition font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
                 filter === "all" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
               }`}
             >
               All Clauses ({items.length})
             </button>
             <button
+              role="tab"
+              aria-selected={filter === "material"}
               onClick={() => setFilter("material")}
-              className={`px-3 py-1 rounded-lg transition font-medium ${
+              className={`px-3 py-1 rounded-lg transition font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 ${
                 filter === "material" ? "bg-rose-600 text-white" : "text-slate-400 hover:text-slate-200"
               }`}
             >
               🔴 Material Changes ({items.filter((i) => i.change_flag.includes("Material")).length})
             </button>
             <button
+              role="tab"
+              aria-selected={filter === "added"}
               onClick={() => setFilter("added")}
-              className={`px-3 py-1 rounded-lg transition font-medium ${
+              className={`px-3 py-1 rounded-lg transition font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                 filter === "added" ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-slate-200"
               }`}
             >
               Added ({items.filter((i) => i.change_flag.includes("Added")).length})
             </button>
             <button
+              role="tab"
+              aria-selected={filter === "removed"}
               onClick={() => setFilter("removed")}
-              className={`px-3 py-1 rounded-lg transition font-medium ${
+              className={`px-3 py-1 rounded-lg transition font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
                 filter === "removed" ? "bg-amber-600 text-white" : "text-slate-400 hover:text-slate-200"
               }`}
             >

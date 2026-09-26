@@ -48,7 +48,11 @@ export default function AnalysisPanel({
     "Plain language rewrite in progress...";
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto p-5 space-y-5 text-slate-100">
+    <div
+      aria-live="polite"
+      aria-atomic="true"
+      className="flex flex-col h-full overflow-y-auto p-5 space-y-5 text-slate-100"
+    >
       {/* Top Banner: Attention & Confidence */}
       <div className="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 shadow-md">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -69,7 +73,7 @@ export default function AnalysisPanel({
 
         {/* Disclaimer per requirement */}
         <div className="flex items-center gap-1.5 text-[11px] text-slate-400 bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800/80">
-          <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" aria-hidden="true" />
           <span>{clause.disclaimer}</span>
         </div>
       </div>
@@ -83,10 +87,10 @@ export default function AnalysisPanel({
         return (
           <div className="bg-rose-950/30 border border-rose-500/50 rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-bold text-rose-300 uppercase tracking-wider">
-                <AlertTriangle className="w-4 h-4 text-rose-400" />
+              <h3 className="flex items-center gap-2 text-xs font-bold text-rose-300 uppercase tracking-wider">
+                <AlertTriangle className="w-4 h-4 text-rose-400" aria-hidden="true" />
                 <span>Cross-Clause Conflict Involving This Section</span>
-              </div>
+              </h3>
             </div>
             {clauseConflicts.map((c) => {
               const counterpartId = c.clause_a_id === clause.id ? c.clause_b_id : c.clause_a_id;
@@ -104,10 +108,11 @@ export default function AnalysisPanel({
                   <p className="text-xs text-slate-300 leading-relaxed">{c.explanation}</p>
                   <button
                     onClick={() => onSelectClause(counterpartId)}
-                    className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 transition"
+                    aria-label={`Inspect conflicting counterpart: ${counterpartTitle} (${counterpartId})`}
+                    className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 rounded"
                   >
                     <span>Inspect conflicting counterpart: {counterpartTitle} ({counterpartId})</span>
-                    <ArrowRight className="w-3 h-3" />
+                    <ArrowRight className="w-3 h-3" aria-hidden="true" />
                   </button>
                 </div>
               );
@@ -118,15 +123,15 @@ export default function AnalysisPanel({
 
       {/* Why Flagged (Explicit Reasoning) */}
       <div className="bg-slate-900/80 rounded-2xl p-4 border border-slate-800/80 space-y-2.5">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-300">
-          <ShieldAlert className="w-4 h-4 text-rose-400" />
+        <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-300">
+          <ShieldAlert className="w-4 h-4 text-rose-400" aria-hidden="true" />
           <span>Why Flagged (Evidence-Grounded Reasoning)</span>
-        </div>
+        </h3>
 
         <ul className="space-y-2 text-xs text-slate-200">
           {clause.attention_reasons?.map((reason, idx) => (
             <li key={idx} className="flex items-start gap-2 bg-slate-950/40 p-2.5 rounded-lg border border-slate-900">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span>
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0" aria-hidden="true"></span>
               <span className="leading-relaxed">{reason}</span>
             </li>
           ))}
@@ -144,10 +149,10 @@ export default function AnalysisPanel({
       {/* Reference Corpus Deviation Check */}
       {clause.deviation_check && (
         <div className="bg-indigo-950/30 rounded-2xl p-4 border border-indigo-500/30 space-y-2">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-300">
-            <FileCheck className="w-4 h-4 text-indigo-400" />
+          <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-300">
+            <FileCheck className="w-4 h-4 text-indigo-400" aria-hidden="true" />
             <span>Reference Corpus Benchmark (CUAD Baseline)</span>
-          </div>
+          </h3>
           <p className="text-xs text-slate-200 leading-relaxed bg-slate-950/50 p-3 rounded-xl border border-indigo-950">
             {clause.deviation_check}
           </p>
@@ -157,16 +162,22 @@ export default function AnalysisPanel({
       {/* Plain Language Rewrite with Reading Level Tabs */}
       <div className="bg-slate-900/80 rounded-2xl p-4 border border-slate-800/80 space-y-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-300">
-            <Sparkles className="w-4 h-4 text-emerald-400" />
+          <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-300">
+            <Sparkles className="w-4 h-4 text-emerald-400" aria-hidden="true" />
             <span>Plain-Language Synthesis</span>
-          </div>
+          </h3>
 
           {/* Reading Level Pills */}
-          <div className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px]">
+          <div
+            role="tablist"
+            aria-label="Reading Level Syntheses"
+            className="flex bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px]"
+          >
             <button
+              role="tab"
+              aria-selected={activeReadingLevel === "general"}
               onClick={() => setActiveReadingLevel("general")}
-              className={`px-2.5 py-1 rounded-md transition font-medium ${
+              className={`px-2.5 py-1 rounded-md transition font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
                 activeReadingLevel === "general"
                   ? "bg-indigo-600 text-white shadow-sm"
                   : "text-slate-400 hover:text-slate-200"
@@ -175,8 +186,10 @@ export default function AnalysisPanel({
               8th Grade
             </button>
             <button
+              role="tab"
+              aria-selected={activeReadingLevel === "executive"}
               onClick={() => setActiveReadingLevel("executive")}
-              className={`px-2.5 py-1 rounded-md transition font-medium ${
+              className={`px-2.5 py-1 rounded-md transition font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
                 activeReadingLevel === "executive"
                   ? "bg-indigo-600 text-white shadow-sm"
                   : "text-slate-400 hover:text-slate-200"
@@ -185,8 +198,10 @@ export default function AnalysisPanel({
               Executive
             </button>
             <button
+              role="tab"
+              aria-selected={activeReadingLevel === "technical"}
               onClick={() => setActiveReadingLevel("technical")}
-              className={`px-2.5 py-1 rounded-md transition font-medium ${
+              className={`px-2.5 py-1 rounded-md transition font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
                 activeReadingLevel === "technical"
                   ? "bg-indigo-600 text-white shadow-sm"
                   : "text-slate-400 hover:text-slate-200"
@@ -205,20 +220,28 @@ export default function AnalysisPanel({
       {/* Connected Clause Graph Edges */}
       {connectedEdges.length > 0 && (
         <div className="bg-slate-900/80 rounded-2xl p-4 border border-slate-800/80 space-y-2.5">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cyan-300">
-            <Link2 className="w-4 h-4 text-cyan-400" />
+          <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cyan-300">
+            <Link2 className="w-4 h-4 text-cyan-400" aria-hidden="true" />
             <span>Clause Graph Connections ({connectedEdges.length})</span>
-          </div>
+          </h3>
 
           <div className="space-y-2">
             {connectedEdges.map((edge, idx) => {
               const otherId = edge.source === clause.id ? edge.target : edge.source;
-              const isOutgoing = edge.source === clause.id;
               return (
                 <div
                   key={idx}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Jump to connected clause ${otherId}: ${edge.description}`}
                   onClick={() => onSelectClause(otherId)}
-                  className="flex items-center justify-between p-2.5 bg-slate-950/50 hover:bg-slate-800/60 rounded-xl border border-slate-800 transition cursor-pointer group"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelectClause(otherId);
+                    }
+                  }}
+                  className="flex items-center justify-between p-2.5 bg-slate-950/50 hover:bg-slate-800/60 rounded-xl border border-slate-800 transition cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
                 >
                   <div className="flex items-center gap-2 text-xs">
                     <span className="font-mono font-semibold px-2 py-0.5 rounded bg-cyan-950/60 text-cyan-300 border border-cyan-800/40">
@@ -230,7 +253,7 @@ export default function AnalysisPanel({
                   </div>
                   <div className="flex items-center gap-1 text-[11px] text-cyan-400 shrink-0">
                     <span>Jump</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
                   </div>
                 </div>
               );
@@ -241,9 +264,9 @@ export default function AnalysisPanel({
 
       {/* Structured Entities Extracted */}
       <div className="bg-slate-900/80 rounded-2xl p-4 border border-slate-800/80 space-y-3">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
           Structured Clause Entities
-        </h4>
+        </h3>
 
         <div className="grid grid-cols-2 gap-3 text-xs">
           {/* Parties */}
@@ -283,10 +306,10 @@ export default function AnalysisPanel({
 
       {/* Questions for Your Lawyer */}
       <div className="bg-slate-900/80 rounded-2xl p-4 border border-slate-800/80 space-y-2">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-300">
-          <HelpCircle className="w-4 h-4 text-amber-400" />
+        <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-300">
+          <HelpCircle className="w-4 h-4 text-amber-400" aria-hidden="true" />
           <span>Questions for Your Lawyer</span>
-        </div>
+        </h3>
         <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/60 p-3 rounded-xl border border-slate-900">
           "What is the enforceable market radius and severance compensation standard for covenants in {clause.title} under governing state law?"
         </p>

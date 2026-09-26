@@ -29,12 +29,16 @@ export default function TimelineView({ timeline = [], onSelectClause }) {
       </div>
 
       {/* Visual Timeline Track */}
-      <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-gradient-to-b before:from-indigo-500 before:via-emerald-500 before:to-slate-700">
+      <div
+        role="list"
+        aria-label="Obligation Timeline Milestones"
+        className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-gradient-to-b before:from-indigo-500 before:via-emerald-500 before:to-slate-700"
+      >
         {timeline.map((event, idx) => {
           return (
-            <div key={event.id || idx} className="relative group">
+            <div key={event.id || idx} role="listitem" className="relative group">
               {/* Timeline Node Dot */}
-              <div className="absolute -left-6 top-1.5 w-4 h-4 rounded-full border-2 border-slate-900 bg-emerald-400 shadow-md shadow-emerald-500/20 group-hover:scale-125 transition-transform duration-200"></div>
+              <div className="absolute -left-6 top-1.5 w-4 h-4 rounded-full border-2 border-slate-900 bg-emerald-400 shadow-md shadow-emerald-500/20 group-hover:scale-125 transition-transform duration-200" aria-hidden="true"></div>
 
               {/* Event Card */}
               <div className="bg-slate-900/80 hover:bg-slate-800/80 border border-slate-800 rounded-2xl p-4 transition-all duration-200 shadow-sm">
@@ -67,10 +71,11 @@ export default function TimelineView({ timeline = [], onSelectClause }) {
 
                   <button
                     onClick={() => onSelectClause(event.clause_id)}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-950/40 hover:bg-indigo-900/40 px-2.5 py-1 rounded-lg border border-indigo-500/30 transition"
+                    aria-label={`Jump to cited clause ${event.citation}`}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-950/40 hover:bg-indigo-900/40 px-2.5 py-1 rounded-lg border border-indigo-500/30 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
                   >
                     <span>Cite: {event.citation}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
                   </button>
                 </div>
               </div>

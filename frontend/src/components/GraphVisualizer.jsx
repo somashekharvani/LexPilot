@@ -26,34 +26,46 @@ export default function GraphVisualizer({ clauses = [], edges = [], conflicts = 
         </div>
 
         {/* Filter by relation */}
-        <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+        <div
+          role="tablist"
+          aria-label="Filter edges by relationship type"
+          className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs"
+        >
           <button
+            role="tab"
+            aria-selected={selectedRelation === "all"}
             onClick={() => setSelectedRelation("all")}
-            className={`px-3 py-1 rounded-lg transition font-medium ${
+            className={`px-3 py-1 rounded-lg transition font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
               selectedRelation === "all" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
             }`}
           >
             All Edges ({edges.length})
           </button>
           <button
+            role="tab"
+            aria-selected={selectedRelation === "SURVIVES"}
             onClick={() => setSelectedRelation("SURVIVES")}
-            className={`px-3 py-1 rounded-lg transition font-medium ${
+            className={`px-3 py-1 rounded-lg transition font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
               selectedRelation === "SURVIVES" ? "bg-cyan-600 text-white" : "text-slate-400 hover:text-slate-200"
             }`}
           >
             Survives ({edges.filter((e) => e.relation === "SURVIVES").length})
           </button>
           <button
+            role="tab"
+            aria-selected={selectedRelation === "CONFLICTS_WITH"}
             onClick={() => setSelectedRelation("CONFLICTS_WITH")}
-            className={`px-3 py-1 rounded-lg transition font-medium ${
+            className={`px-3 py-1 rounded-lg transition font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
               selectedRelation === "CONFLICTS_WITH" ? "bg-rose-600 text-white" : "text-slate-400 hover:text-slate-200"
             }`}
           >
             ⚠️ Conflicts ({edges.filter((e) => e.relation === "CONFLICTS_WITH").length})
           </button>
           <button
+            role="tab"
+            aria-selected={selectedRelation === "REFERENCES"}
             onClick={() => setSelectedRelation("REFERENCES")}
-            className={`px-3 py-1 rounded-lg transition font-medium ${
+            className={`px-3 py-1 rounded-lg transition font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
               selectedRelation === "REFERENCES" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"
             }`}
           >
@@ -65,10 +77,10 @@ export default function GraphVisualizer({ clauses = [], edges = [], conflicts = 
       {/* Cross-Clause Conflicts Callout (Feature 4) */}
       {conflicts.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-300">
-            <AlertTriangle className="w-4 h-4 text-rose-400" />
+          <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-300">
+            <AlertTriangle className="w-4 h-4 text-rose-400" aria-hidden="true" />
             <span>⚠️ Potential Contract Conflicts Detected ({conflicts.length})</span>
-          </div>
+          </h3>
 
           {conflicts.map((conf) => (
             <div
@@ -93,27 +105,31 @@ export default function GraphVisualizer({ clauses = [], edges = [], conflicts = 
 
               {/* Side-by-Side Conflicting Excerpts */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                <div
+                <button
+                  type="button"
                   onClick={() => onSelectClause(conf.clause_a_id)}
-                  className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 hover:border-indigo-500 cursor-pointer transition group"
+                  aria-label={`Inspect conflicting clause A: ${conf.clause_a_title} (${conf.clause_a_id})`}
+                  className="w-full text-left bg-slate-950/80 p-3 rounded-xl border border-slate-800 hover:border-indigo-500 cursor-pointer transition group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
                 >
                   <div className="flex items-center justify-between text-[11px] font-bold text-indigo-400 mb-1">
                     <span>{conf.clause_a_title} ({conf.clause_a_id})</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                   </div>
                   <p className="text-slate-300 italic text-[11px]">"{conf.clause_a_excerpt}"</p>
-                </div>
+                </button>
 
-                <div
+                <button
+                  type="button"
                   onClick={() => onSelectClause(conf.clause_b_id)}
-                  className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 hover:border-rose-500 cursor-pointer transition group"
+                  aria-label={`Inspect conflicting clause B: ${conf.clause_b_title} (${conf.clause_b_id})`}
+                  className="w-full text-left bg-slate-950/80 p-3 rounded-xl border border-slate-800 hover:border-rose-500 cursor-pointer transition group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
                 >
                   <div className="flex items-center justify-between text-[11px] font-bold text-rose-400 mb-1">
                     <span>{conf.clause_b_title} ({conf.clause_b_id})</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                   </div>
                   <p className="text-slate-300 italic text-[11px]">"{conf.clause_b_excerpt}"</p>
-                </div>
+                </button>
               </div>
 
               <div className="text-[11px] text-amber-300/90 font-medium">

@@ -26,3 +26,9 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(99, 102, 241, 0.8);
 }
+
+/* Accessible high-contrast focus visible indicator (WCAG 2.4.7) */
+:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}

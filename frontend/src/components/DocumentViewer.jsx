@@ -51,12 +51,13 @@ export default function DocumentViewer({
             </div>
           </div>
 
-          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-lg text-xs font-medium transition shadow-sm">
-            <Upload className="w-3.5 h-3.5" />
+          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-lg text-xs font-medium transition shadow-sm focus-within:ring-2 focus-within:ring-indigo-400">
+            <Upload className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Upload</span>
             <input
               type="file"
               accept=".pdf,.txt,.doc,.docx"
+              aria-label="Upload document file (PDF, TXT, DOC, DOCX)"
               className="hidden"
               onChange={(e) => {
                 if (e.target.files?.[0]) onUploadFile(e.target.files[0]);
@@ -67,37 +68,53 @@ export default function DocumentViewer({
 
         {/* Search within document */}
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" aria-hidden="true" />
           <input
             type="text"
+            aria-label="Search clauses, terms, or covenants in document"
             placeholder="Search clauses, terms, or covenants in document..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-950/70 border border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/80 transition"
+            className="w-full bg-slate-950/70 border border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/80 focus-visible:ring-2 focus-visible:ring-indigo-400 transition"
           />
         </div>
       </div>
 
       {/* Clause Stream Viewer */}
-      <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-4 doc-scroll-pane">
+      <div
+        ref={containerRef}
+        role="region"
+        aria-label="Extracted Contract Clauses"
+        className="flex-1 overflow-y-auto p-4 space-y-4 doc-scroll-pane"
+      >
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center h-64 text-slate-400 space-y-3">
-            <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="flex flex-col items-center justify-center h-64 text-slate-400 space-y-3" role="status" aria-live="polite">
+            <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" aria-hidden="true"></div>
             <p className="text-xs tracking-wide">Executing Layout-Aware Parsing & Classification...</p>
           </div>
         ) : filteredClauses.length === 0 ? (
-          <div className="text-center py-16 text-slate-400 text-xs">
+          <div className="text-center py-16 text-slate-400 text-xs" role="status">
             No clauses match your search query.
           </div>
         ) : (
-          filteredClauses.map((clause, idx) => {
+          filteredClauses.map((clause) => {
             const isSelected = selectedClauseId === clause.id;
             return (
               <div
                 key={clause.id}
                 ref={(el) => (clauseRefs.current[clause.id] = el)}
+                role="button"
+                tabIndex={0}
+                aria-pressed={isSelected}
+                aria-label={`Clause ${clause.id}: ${clause.title || clause.category}. Attention: ${clause.attention_level || 'Normal'}.`}
                 onClick={() => onSelectClause(clause.id)}
-                className={`group relative rounded-xl p-4 transition-all duration-300 cursor-pointer border ${
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelectClause(clause.id);
+                  }
+                }}
+                className={`group relative rounded-xl p-4 transition-all duration-300 cursor-pointer border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
                   isSelected
                     ? "bg-slate-800/90 border-indigo-500 shadow-lg shadow-indigo-500/10 ring-2 ring-indigo-500/30"
                     : "bg-slate-950/40 hover:bg-slate-800/40 border-slate-800/80 hover:border-slate-700"
